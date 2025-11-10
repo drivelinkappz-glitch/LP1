@@ -1,0 +1,43 @@
+package sync;
+import java.util.concurrent.locks.ReentrantLock;
+
+class MutexExample {
+    private static final ReentrantLock lock = new ReentrantLock();
+    private static int sharedCounter = 0;
+
+    static class Worker extends Thread {
+        String name;
+
+        Worker(String name) {
+            this.name = name;
+        }
+
+        public void run() {
+            System.out.println(name + " is trying to acquire the lock...");
+
+            lock.lock();   // Enter critical section
+            try {
+                System.out.println(name + " has entered critical section...");
+                sharedCounter++;
+
+                // Simulate work
+                try { Thread.sleep(500); } catch (Exception e) {}
+
+                System.out.println(name + " updated shared counter to: " + sharedCounter);
+            } finally {
+                System.out.println(name + " is leaving critical section...");
+                lock.unlock();
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        Thread t1 = new Worker("Thread-1");
+        Thread t2 = new Worker("Thread-2");
+        Thread t3 = new Worker("Thread-3");
+
+        t1.start();
+        t2.start();
+        t3.start();
+    }
+}

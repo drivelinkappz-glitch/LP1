@@ -1,0 +1,24 @@
+package sync;
+import java.util.Scanner;
+
+public class TestLibrary {
+
+    public static void main(String[] args) {
+        
+        MathLibrary lib = new MathLibrary();
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter first number: ");
+        int a = sc.nextInt();
+
+        System.out.print("Enter second number: ");
+        int b = sc.nextInt();
+
+        System.out.println("Addition = " + lib.add(a, b));
+        System.out.println("Subtraction = " + lib.sub(a, b));
+        System.out.println("Multiplication = " + lib.mul(a, b));
+        System.out.println("Division = " + lib.div(a, b));
+
+        sc.close();
+    }
+}

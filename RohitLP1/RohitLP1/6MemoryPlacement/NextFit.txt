@@ -1,0 +1,68 @@
+package sync;
+import java.util.*;
+
+public class NextFit {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of memory blocks: ");
+        int nb = sc.nextInt();
+        int blockSize[] = new int[nb];
+        int blockAllocated[] = new int[nb];   // 0 => free, 1 => allocated
+
+        System.out.println("Enter size of each memory block:");
+        for (int i = 0; i < nb; i++) {
+            blockSize[i] = sc.nextInt();
+            blockAllocated[i] = 0;
+        }
+
+        System.out.print("Enter number of processes: ");
+        int np = sc.nextInt();
+        int processSize[] = new int[np];
+        int allocatedBlock[] = new int[np];
+
+        System.out.println("Enter size of each process:");
+        for (int i = 0; i < np; i++) {
+            processSize[i] = sc.nextInt();
+            allocatedBlock[i] = -1;   // Not allocated
+        }
+
+        int lastAllocatedIndex = 0;   // remember where we allocated last
+
+        // NEXT FIT
+        for (int i = 0; i < np; i++) {
+            int j = lastAllocatedIndex;
+            boolean allocated = false;
+
+            do {
+                if (blockAllocated[j] == 0 && blockSize[j] >= processSize[i]) {
+                    allocatedBlock[i] = j;
+                    blockAllocated[j] = 1;
+                    lastAllocatedIndex = j;   // update last allocated position
+                    allocated = true;
+                    break;
+                }
+
+                j = (j + 1) % nb;
+            } while (j != lastAllocatedIndex);
+
+            if (!allocated) {
+                allocatedBlock[i] = -1; // not allocated
+            }
+        }
+
+        // Output Result
+        System.out.println("\nProcess No.\tProcess Size\tBlock Allocated");
+        for (int i = 0; i < np; i++) {
+            System.out.print("P" + (i + 1) + "\t\t" + processSize[i] + "\t\t");
+            if (allocatedBlock[i] != -1)
+                System.out.println("B" + (allocatedBlock[i] + 1));
+            else
+                System.out.println("Not Allocated");
+        }
+
+        sc.close();
+    }
+}

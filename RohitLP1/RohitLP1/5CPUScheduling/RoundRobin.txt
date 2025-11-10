@@ -1,0 +1,76 @@
+package sync;
+import java.util.*;
+
+class RRProcess {
+    int pid, bt, rt, wt, tat;
+
+    RRProcess(int pid, int bt) {
+        this.pid = pid;
+        this.bt = bt;
+        this.rt = bt;
+    }
+}
+
+public class RoundRobin {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        RRProcess p[] = new RRProcess[n];
+
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter Burst Time for P" + (i+1) + ": ");
+            int bt = sc.nextInt();
+            p[i] = new RRProcess(i+1, bt);
+        }
+
+        System.out.print("Enter Time Quantum: ");
+        int tq = sc.nextInt();
+
+        int time = 0, completed = 0;
+        ArrayList<Integer> gantt = new ArrayList<>();
+
+        while (completed != n) {
+            boolean flag = false;
+
+            for (int i = 0; i < n; i++) {
+                if (p[i].rt > 0) {
+                    flag = true;
+                    if (p[i].rt > tq) {
+                        time += tq;
+                        p[i].rt -= tq;
+                        gantt.add(p[i].pid);
+                    } else {
+                        time += p[i].rt;
+                        p[i].wt = time - p[i].bt;
+                        p[i].rt = 0;
+                        completed++;
+                        p[i].tat = time;
+                        gantt.add(p[i].pid);
+                    }
+                }
+            }
+            if (!flag) break;
+        }
+
+        double totalWT = 0, totalTAT = 0;
+
+        System.out.println("\nPID\tBT\tWT\tTAT");
+        for (RRProcess x : p) {
+            System.out.println("P" + x.pid + "\t" + x.bt + "\t" + x.wt + "\t" + x.tat);
+            totalWT += x.wt;
+            totalTAT += x.tat;
+        }
+
+        System.out.println("\nAverage Waiting Time: " + totalWT/n);
+        System.out.println("Average Turnaround Time: " + totalTAT/n);
+
+        System.out.println("\nGantt Chart:");
+        for (int g : gantt) System.out.print("P" + g + " ");
+
+        sc.close();
+    }
+}

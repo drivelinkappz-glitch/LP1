@@ -1,0 +1,62 @@
+package sync;
+import java.util.*;
+
+public class WorstFit {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of memory blocks: ");
+        int nb = sc.nextInt();
+        int blockSize[] = new int[nb];
+        int blockAllocated[] = new int[nb];   // 0 = free, 1 = allocated
+
+        System.out.println("Enter size of each memory block:");
+        for (int i = 0; i < nb; i++) {
+            blockSize[i] = sc.nextInt();
+            blockAllocated[i] = 0;
+        }
+
+        System.out.print("Enter number of processes: ");
+        int np = sc.nextInt();
+        int processSize[] = new int[np];
+        int allocatedBlock[] = new int[np];
+
+        System.out.println("Enter size of each process:");
+        for (int i = 0; i < np; i++) {
+            processSize[i] = sc.nextInt();
+            allocatedBlock[i] = -1;   // Not allocated
+        }
+
+        // WORST FIT
+        for (int i = 0; i < np; i++) {
+            int worstIdx = -1;
+
+            for (int j = 0; j < nb; j++) {
+                if (blockAllocated[j] == 0 && blockSize[j] >= processSize[i]) {
+                    if (worstIdx == -1 || blockSize[j] > blockSize[worstIdx]) {
+                        worstIdx = j;
+                    }
+                }
+            }
+
+            if (worstIdx != -1) {
+                allocatedBlock[i] = worstIdx;
+                blockAllocated[worstIdx] = 1;
+            }
+        }
+
+        // Output Result
+        System.out.println("\nProcess No.\tProcess Size\tBlock Allocated");
+        for (int i = 0; i < np; i++) {
+            System.out.print("P" + (i + 1) + "\t\t" + processSize[i] + "\t\t");
+            if (allocatedBlock[i] != -1)
+                System.out.println("B" + (allocatedBlock[i] + 1));
+            else
+                System.out.println("Not Allocated");
+        }
+
+        sc.close();
+    }
+}

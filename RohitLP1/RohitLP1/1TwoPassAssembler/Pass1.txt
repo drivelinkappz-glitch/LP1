@@ -1,0 +1,108 @@
+package sync;
+import java.io.*;
+import java.util.*;
+
+public class Pass1 {
+
+    static class Symbol {
+        String name;
+        int address;
+        Symbol(String n, int a){ name=n; address=a; }
+    }
+
+    static class Literal {
+        String name;
+        int address;
+        Literal(String n){ name=n; address=-1; }
+    }
+
+    public static void main(String[] args) {
+
+        int LC = 0;
+
+        List<Symbol> SYMTAB = new ArrayList<>();
+        List<Literal> LITTAB = new ArrayList<>();
+        List<Integer> POOLTAB = new ArrayList<>();
+        POOLTAB.add(0);
+
+        try {
+            BufferedReader br = new BufferedReader(new FileReader("source.asm"));
+            PrintWriter intermediate = new PrintWriter("intermediate.txt");
+
+            String line;
+            while((line = br.readLine()) != null){
+
+                if(line.trim().length()==0) continue;
+
+                String tokens[] = line.split("\\s+");
+
+                if(tokens.length == 1){
+                    if(tokens[0].equalsIgnoreCase("END")){
+                        for(int i = POOLTAB.get(POOLTAB.size()-1); i < LITTAB.size(); i++){
+                            LITTAB.get(i).address = LC++;
+                        }
+                        POOLTAB.add(LITTAB.size());
+                        intermediate.println(line);
+                        break;
+                    }
+                }
+
+                // LABEL
+                if(tokens.length >= 2 && !tokens[1].equalsIgnoreCase("START")){
+                    boolean found=false;
+                    for(Symbol s:SYMTAB)
+                        if(s.name.equals(tokens[0])) found=true;
+                    if(!found)
+                        SYMTAB.add(new Symbol(tokens[0], LC));
+                }
+
+                // START
+                if(tokens.length >= 2 && tokens[1].equalsIgnoreCase("START")){
+                    LC = Integer.parseInt(tokens[2]);
+                    intermediate.println(line);
+                    continue;
+                }
+
+                // Literals
+                if(line.contains("=")){
+                    String lit = tokens[tokens.length-1];
+                    boolean found=false;
+                    for(Literal l: LITTAB)
+                        if(l.name.equals(lit)) found=true;
+                    if(!found)
+                        LITTAB.add(new Literal(lit));
+                }
+
+                LC++;
+                intermediate.println(line);
+            }
+
+            br.close();
+            intermediate.close();
+
+            // SYMTAB output
+            PrintWriter sym = new PrintWriter("symtab.txt");
+            for(Symbol s: SYMTAB)
+                sym.println(s.name + " " + s.address);
+            sym.close();
+
+            // LITTAB output
+            PrintWriter lit = new PrintWriter("littab.txt");
+            for(Literal l: LITTAB)
+                lit.println(l.name + " " + l.address);
+            lit.close();
+
+            // POOLTAB output
+            PrintWriter pool = new PrintWriter("pooltab.txt");
+            for(Integer p: POOLTAB)
+                pool.println(p);
+            pool.close();
+
+            System.out.println("Pass-1 Completed ✅");
+            System.out.println("Generated: intermediate.txt, symtab.txt, littab.txt, pooltab.txt");
+
+        } catch(Exception e){
+            System.out.println("Error: "+e);
+        }
+    }
+}

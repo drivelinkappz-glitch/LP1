@@ -1,0 +1,89 @@
+package sync;
+import java.util.*;
+
+class Process {
+    int pid, at, bt, wt, tat;
+    public Process(int pid, int at, int bt) {
+        this.pid = pid;
+        this.at = at;
+        this.bt = bt;
+    }
+}
+
+public class SJF {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+
+        Process[] p = new Process[n];
+
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter Arrival Time for P" + (i + 1) + ": ");
+            int at = sc.nextInt();
+            System.out.print("Enter Burst Time for P" + (i + 1) + ": ");
+            int bt = sc.nextInt();
+            p[i] = new Process(i + 1, at, bt);
+        }
+
+        // Sort by arrival time
+        Arrays.sort(p, Comparator.comparingInt(a -> a.at));
+
+        boolean[] done = new boolean[n];
+        int completed = 0, time = 0;
+        double totalWT = 0, totalTAT = 0;
+
+        List<Integer> gantt = new ArrayList<>();
+
+        while (completed != n) {
+
+            int idx = -1;
+            int minBT = Integer.MAX_VALUE;
+
+            // Find available process with minimum burst time
+            for (int i = 0; i < n; i++) {
+                if (!done[i] && p[i].at <= time && p[i].bt < minBT) {
+                    minBT = p[i].bt;
+                    idx = i;
+                }
+            }
+
+            if (idx == -1) {   // No process has arrived
+                time++;
+                gantt.add(0);  // Idle
+            } else {
+                p[idx].wt = time - p[idx].at;
+                time += p[idx].bt;
+                p[idx].tat = time - p[idx].at;
+                done[idx] = true;
+                completed++;
+
+                gantt.add(p[idx].pid);
+
+                totalWT += p[idx].wt;
+                totalTAT += p[idx].tat;
+            }
+        }
+
+        System.out.println("\n---------------------------------------------");
+        System.out.println("PID\tAT\tBT\tWT\tTAT");
+        for (Process x : p) {
+            System.out.println("P" + x.pid + "\t" + x.at + "\t" + x.bt + "\t"
+                    + x.wt + "\t" + x.tat);
+        }
+
+        System.out.println("\nAverage Waiting Time: " + (totalWT / n));
+        System.out.println("Average Turnaround Time: " + (totalTAT / n));
+
+        System.out.println("\nGantt Chart:");
+        for (int g : gantt) {
+            if (g == 0) System.out.print("IDLE ");
+            else System.out.print("P" + g + " ");
+        }
+        System.out.println();
+        sc.close();
+    }
+}

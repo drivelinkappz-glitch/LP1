@@ -1,0 +1,63 @@
+package sync;
+import java.util.LinkedList;
+import java.util.concurrent.Semaphore;
+
+class ProducerConsumer {
+    static Semaphore mutex = new Semaphore(1);
+    static Semaphore empty = new Semaphore(5);  // Buffer size
+    static Semaphore full = new Semaphore(0);
+
+    static LinkedList<Integer> buffer = new LinkedList<>();
+    static int item = 0;
+
+    static class Producer extends Thread {
+        public void run() {
+            try {
+                while (true) {
+                    empty.acquire();  
+                    mutex.acquire();  
+
+                    item++;
+                    buffer.add(item);
+                    System.out.println("Produced: " + item);
+
+                    mutex.release();
+                    full.release();
+
+                    Thread.sleep(500);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    static class Consumer extends Thread {
+        public void run() {
+            try {
+                while (true) {
+                    full.acquire();
+                    mutex.acquire();
+
+                    int removedItem = buffer.removeFirst();
+                    System.out.println("Consumed: " + removedItem);
+
+                    mutex.release();
+                    empty.release();
+
+                    Thread.sleep(800);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public static void main(String[] args) {
+        Producer p = new Producer();
+        Consumer c = new Consumer();
+
+        p.start();
+        c.start();
+    }
+}

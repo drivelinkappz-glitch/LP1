@@ -1,0 +1,101 @@
+package sync;
+import java.io.*;
+import java.util.*;
+
+/*
+ Pass2Macro.java
+ Simple Pass-2: expands macros using MNT/MDT/ALA produced by Pass1.
+ Produces: expanded.txt (expanded source), listing.txt
+*/
+public class Pass2Macro {
+    public static void main(String[] args) throws Exception {
+        // load MNT
+        LinkedHashMap<String,Integer> MNT = new LinkedHashMap<>();
+        LinkedHashMap<String,Integer> MNTParams = new LinkedHashMap<>();
+        BufferedReader mnt = new BufferedReader(new FileReader("mnt.txt"));
+        String line;
+        while((line = mnt.readLine())!=null){
+            String[] t = line.trim().split("\\s+");
+            if(t.length>=3){
+                MNT.put(t[0], Integer.parseInt(t[1]));
+                MNTParams.put(t[0], Integer.parseInt(t[2]));
+            }
+        }
+        mnt.close();
+
+        // load MDT into list (indexing 0-based)
+        List<String> MDT = new ArrayList<>();
+        BufferedReader mdt = new BufferedReader(new FileReader("mdt.txt"));
+        while((line = mdt.readLine())!=null) MDT.add(line);
+        mdt.close();
+
+        // load ALA (map macro -> list of formal params in order)
+        Map<String, List<String>> ALA = new HashMap<>();
+        BufferedReader ala = new BufferedReader(new FileReader("ala.txt"));
+        while((line = ala.readLine())!=null){
+            String[] t = line.trim().split("\\s+",2);
+            if(t.length==2){
+                String macro = t[0];
+                if(t[1].trim().equals("-")) { ALA.put(macro, new ArrayList<>()); continue; }
+                String[] parts = t[1].split(",");
+                List<String> fp = new ArrayList<>();
+                for(String p:parts){
+                    String[] kv = p.split("=",2);
+                    if(kv.length==2) fp.add(kv[1]);
+                }
+                ALA.put(macro, fp);
+            }
+        }
+        ala.close();
+
+        // read intermediate and expand
+        BufferedReader inter = new BufferedReader(new FileReader("intermediate.txt"));
+        PrintWriter expanded = new PrintWriter("expanded.txt");
+        PrintWriter listing = new PrintWriter("listing.txt");
+
+        while((line = inter.readLine())!=null){
+            String l = line.trim();
+            if(l.isEmpty()) continue;
+            String[] tok = l.split("\\s+");
+            String first = tok[0];
+
+            if(MNT.containsKey(first)) {
+                // macro call: parse actual params
+                String actuals = (tok.length>1)? l.substring(first.length()).trim() : "";
+                List<String> actList = new ArrayList<>();
+                if(!actuals.isEmpty()){
+                    // split by commas and trim
+                    String[] parts = actuals.split(",");
+                    for(String p:parts) actList.add(p.trim());
+                }
+                // create mapping P1->actual1, P2->actual2 ...
+                Map<String,String> map = new HashMap<>();
+                for(int i=0;i<actList.size();i++) map.put("(P"+(i+1)+")", actList.get(i));
+
+                // fetch MDT starting at index
+                int idx = MNT.get(first);
+                for(int i=idx;i<MDT.size();i++){
+                    String mline = MDT.get(i);
+                    if(mline.equals("MEND")) break;
+                    // replace placeholders (P1) with actuals
+                    String out = mline;
+                    for(Map.Entry<String,String> e: map.entrySet()){
+                        out = out.replace(e.getKey(), e.getValue());
+                    }
+                    expanded.println(out);
+                    listing.println(out);
+                }
+            } else {
+                // normal assembly line -> pass-through
+                expanded.println(l);
+                listing.println(l);
+            }
+        }
+
+        inter.close();
+        expanded.close();
+        listing.close();
+
+        System.out.println("Pass-2 (Macro) completed. Created: expanded.txt, listing.txt");
+    }
+}

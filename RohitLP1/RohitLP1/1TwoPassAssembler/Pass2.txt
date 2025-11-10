@@ -1,0 +1,75 @@
+package sync;
+import java.io.*;
+import java.util.*;
+
+public class Pass2 {
+
+    static HashMap<String,Integer> SYMTAB = new HashMap<>();
+    static HashMap<String,Integer> LITTAB = new HashMap<>();
+
+    public static void main(String[] args){
+
+        try{
+            // Load SYMTAB
+            BufferedReader br1 = new BufferedReader(new FileReader("symtab.txt"));
+            String line;
+            while((line = br1.readLine()) != null){
+                String t[] = line.split("\\s+");
+                SYMTAB.put(t[0], Integer.parseInt(t[1]));
+            }
+            br1.close();
+
+            // Load LITTAB
+            BufferedReader br2 = new BufferedReader(new FileReader("littab.txt"));
+            while((line = br2.readLine()) != null){
+                String t[] = line.split("\\s+");
+                LITTAB.put(t[0], Integer.parseInt(t[1]));
+            }
+            br2.close();
+
+            BufferedReader inter = new BufferedReader(new FileReader("intermediate.txt"));
+            PrintWriter mc = new PrintWriter("machinecode.txt");
+            PrintWriter lst = new PrintWriter("listing.txt");
+
+            while((line = inter.readLine()) != null){
+                String t[] = line.split("\\s+");
+
+                if(t[0].equalsIgnoreCase("START"))
+                    continue;
+
+                if(t[0].equalsIgnoreCase("END"))
+                    break;
+
+                int op = 0;
+                int addr = 0;
+
+                if(t.length >= 2){
+                    String opcode = t[0];
+                    String operand = t[t.length-1];
+
+                    try{ op = Integer.parseInt(opcode); } catch(Exception e){ op = 0; }
+
+                    if(operand.startsWith("=")){
+                        addr = LITTAB.get(operand);
+                    } else {
+                        if(SYMTAB.containsKey(operand))
+                            addr = SYMTAB.get(operand);
+                    }
+                }
+
+                mc.println(op + " " + addr);
+                lst.println(line);
+            }
+
+            mc.close();
+            lst.close();
+            inter.close();
+
+            System.out.println("Pass-2 Completed ✅");
+            System.out.println("Generated: machinecode.txt, listing.txt");
+
+        }catch(Exception e){
+            System.out.println("Error: "+e);
+        }
+    }
+}

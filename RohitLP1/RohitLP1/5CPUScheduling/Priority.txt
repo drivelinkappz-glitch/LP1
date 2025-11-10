@@ -1,0 +1,93 @@
+package sync;
+import java.util.*;
+
+class PData {
+    int pid, at, bt, priority, wt, tat;
+
+    public PData(int pid, int at, int bt, int priority) {
+        this.pid = pid;
+        this.at = at;
+        this.bt = bt;
+        this.priority = priority;
+    }
+}
+
+public class Priority {
+
+    public static void main(String[] args) {
+
+        Scanner sc = new Scanner(System.in);
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+
+        PData[] p = new PData[n];
+
+        for (int i = 0; i < n; i++) {
+            System.out.print("Enter Arrival Time for P" + (i + 1) + ": ");
+            int at = sc.nextInt();
+            System.out.print("Enter Burst Time for P" + (i + 1) + ": ");
+            int bt = sc.nextInt();
+            System.out.print("Enter Priority for P" + (i + 1) + ": ");
+            int priority = sc.nextInt();
+
+            p[i] = new PData(i + 1, at, bt, priority);
+        }
+
+        Arrays.sort(p, Comparator.comparingInt(a -> a.at));
+
+        boolean[] done = new boolean[n];
+        int completed = 0, time = 0;
+        double totalWT = 0, totalTAT = 0;
+
+        List<Integer> gantt = new ArrayList<>();
+
+        while (completed != n) {
+
+            int idx = -1;
+            int highestPriority = Integer.MAX_VALUE;
+
+            for (int i = 0; i < n; i++) {
+                if (!done[i] && p[i].at <= time && p[i].priority < highestPriority) {
+                    highestPriority = p[i].priority;
+                    idx = i;
+                }
+            }
+
+            if (idx == -1) {
+                time++;
+                gantt.add(0);
+            } else {
+                p[idx].wt = time - p[idx].at;
+                time += p[idx].bt;
+                p[idx].tat = time - p[idx].at;
+                done[idx] = true;
+                completed++;
+
+                gantt.add(p[idx].pid);
+
+                totalWT += p[idx].wt;
+                totalTAT += p[idx].tat;
+            }
+        }
+
+        System.out.println("\n---------------------------------------------");
+        System.out.println("PID\tAT\tBT\tPriority\tWT\tTAT");
+        for (PData x : p) {
+            System.out.println("P" + x.pid + "\t" + x.at + "\t" + x.bt + "\t"
+                    + x.priority + "\t\t" + x.wt + "\t" + x.tat);
+        }
+
+        System.out.println("\nAverage Waiting Time: " + (totalWT / n));
+        System.out.println("Average Turnaround Time: " + (totalTAT / n));
+
+        System.out.println("\nGantt Chart:");
+        for (int g : gantt) {
+            if (g == 0) System.out.print("IDLE ");
+            else System.out.print("P" + g + " ");
+        }
+        System.out.println();
+
+        sc.close();
+    }
+}

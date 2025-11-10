@@ -1,0 +1,22 @@
+MACRO
+INCR &A,&B
+    LDA &A
+    ADD &B
+    STA &A
+MEND
+
+MACRO
+SWAP &X,&Y
+    LOAD &X
+    STORE TEMP
+    LOAD &Y
+    STORE &X
+    LOAD TEMP
+    STORE &Y
+MEND
+
+START 100
+INCR ALPHA,BETA
+MOV R1, R2
+SWAP A,B
+END

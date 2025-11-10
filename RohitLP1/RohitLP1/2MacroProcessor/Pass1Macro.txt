@@ -1,0 +1,106 @@
+package sync;
+import java.io.*;
+import java.util.*;
+
+/*
+ Pass1Macro.java
+ Simple Pass-1 for a two-pass macro processor.
+ Produces: intermediate.txt, mnt.txt, mdt.txt, ala.txt, pooltab.txt
+*/
+public class Pass1Macro {
+    static class MNTEntry { String name; int mdtIndex; int nparams; MNTEntry(String n,int i,int p){name=n;mdtIndex=i;nparams=p;} }
+    public static void main(String[] args) throws Exception {
+        BufferedReader src = new BufferedReader(new FileReader("source.asm"));
+        PrintWriter inter = new PrintWriter("intermediate.txt");
+        PrintWriter mntOut = new PrintWriter("mnt.txt");
+        PrintWriter mdtOut = new PrintWriter("mdt.txt");
+        PrintWriter alaOut = new PrintWriter("ala.txt");
+        PrintWriter poolOut = new PrintWriter("pooltab.txt");
+
+        Map<String,MNTEntry> MNT = new LinkedHashMap<>();
+        List<String> MDT = new ArrayList<>();
+        List<String> POOLTAB = new ArrayList<>();
+        POOLTAB.add("0");
+
+        String line;
+        boolean inMacro=false;
+        String macroName=null;
+        List<String> formalParams = new ArrayList<>();
+        int mdtPtr = 0;
+
+        while ((line = src.readLine()) != null) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            String[] tok = line.split("\\s+");
+            // detect start of macro definition: a line "MACRO"
+            if (tok[0].equalsIgnoreCase("MACRO")) {
+                inMacro = true;
+                // next line should be header: name params
+                String header = src.readLine();
+                if (header==null) break;
+                header = header.trim();
+                String[] h = header.split("\\s+");
+                macroName = h[0];
+                formalParams.clear();
+                if (h.length>1) {
+                    String p = h[1].trim();
+                    String[] parts = p.split(",");
+                    for (String pp:parts) formalParams.add(pp.trim());
+                }
+                // add MNT entry
+                MNT.put(macroName, new MNTEntry(macroName, mdtPtr, formalParams.size()));
+                // write ALA mapping for this macro
+                StringBuilder alaLine = new StringBuilder();
+                for (int i=0;i<formalParams.size();i++) {
+                    if (i>0) alaLine.append(",");
+                    alaLine.append((i+1)+"="+formalParams.get(i));
+                }
+                if (alaLine.length()==0) alaLine.append("-");
+                alaOut.println(macroName + " " + alaLine.toString());
+                continue;
+            }
+
+            if (inMacro) {
+                // check for MEND
+                if (tok[0].equalsIgnoreCase("MEND")) {
+                    inMacro = false;
+                    // mark MDT end by storing a special MEND line
+                    MDT.add("MEND");
+                    mdtPtr++;
+                    continue;
+                }
+                // Process macro definition line: replace formal params &X with positional placeholders (P1,P2,...)
+                String defLine = line;
+                for (int i=0;i<formalParams.size();i++){
+                    String fp = formalParams.get(i);
+                    // formal param may be like &A; replace its occurrences with (P1)
+                    defLine = defLine.replace(fp, "(P"+(i+1)+")");
+                }
+                MDT.add(defLine);
+                mdtPtr++;
+                continue;
+            }
+
+            // outside macro definition: if line contains literal starting with =, track in POOLTAB? simple approach: ignore
+            // write non-definition line to intermediate (macro calls left unchanged)
+            inter.println(line);
+        }
+
+        // write MDT and MNT
+        for (Map.Entry<String,MNTEntry> e: MNT.entrySet()) {
+            mntOut.println(e.getKey() + " " + e.getValue().mdtIndex + " " + e.getValue().nparams);
+        }
+        for (String d: MDT) mdtOut.println(d);
+        for (String p: POOLTAB) poolOut.println(p);
+
+        src.close();
+        inter.close();
+        mntOut.close();
+        mdtOut.close();
+        alaOut.close();
+        poolOut.close();
+
+        System.out.println("Pass-1 (Macro) completed. Created: intermediate.txt, mnt.txt, mdt.txt, ala.txt, pooltab.txt");
+    }
+}
