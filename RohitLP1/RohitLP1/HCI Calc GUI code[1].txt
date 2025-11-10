@@ -1,0 +1,41 @@
+from tkinter import *
+
+root = Tk()
+root.title("Simple Calculator")
+
+entry = Entry(root, width=20, borderwidth=5)
+entry.grid(row=0, column=0, columnspan=4)
+
+def click(num):
+    entry.insert(END, num)
+
+def clear():
+    entry.delete(0, END)
+
+def equal():
+    try:
+        result = eval(entry.get())
+        entry.delete(0, END)
+        entry.insert(0, result)
+    except:
+        entry.delete(0, END)
+        entry.insert(0, "Error")
+
+buttons = [
+    '7','8','9','/',
+    '4','5','6','*',
+    '1','2','3','-',
+    '0','.','=','+'
+]
+
+r, c = 1, 0
+for b in buttons:
+    Button(root, text=b, width=5, height=2, command=lambda x=b: equal() if x=='=' else click(x)).grid(row=r, column=c)
+    c += 1
+    if c > 3:
+        c = 0
+        r += 1
+
+Button(root, text='C', width=5, height=2, command=clear).grid(row=r, column=0)
+
+root.mainloop()
