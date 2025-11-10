@@ -1,0 +1,188 @@
+ASSIGN 2 
+
+import java.util.*;
+
+class twoPassMacroprocessor {
+
+    // ======= Data Structures =======
+    static class Macro {
+        String name;
+        List<String> params = new ArrayList<>();
+        int mdtStart;
+    }
+
+    static class Pass1Result {
+        List<String> intermediate = new ArrayList<>();
+        List<String> mdt = new ArrayList<>();
+        Map<String, Macro> mnt = new LinkedHashMap<>();
+        Map<String, List<String>> pntab = new LinkedHashMap<>();
+    }
+
+    // ======= PASS 1 =======
+    public static Pass1Result pass1(List<String> input) {
+        Pass1Result res = new Pass1Result();
+        int i = 0;
+        while (i < input.size()) {
+            String line = input.get(i).trim();
+            if (line.equalsIgnoreCase("MACRO")) {
+                i++;
+                String header = input.get(i++).trim();
+                String[] headerParts = header.split("\\s+", 2);
+                String macroName = headerParts[0];
+                List<String> params = new ArrayList<>();
+                if (headerParts.length > 1) {
+                    String[] p = headerParts[1].split(",");
+                    for (String s : p) params.add(s.trim().replace("&", ""));
+                }
+
+                Macro macro = new Macro();
+                macro.name = macroName;
+                macro.params = params;
+                macro.mdtStart = res.mdt.size() + 1; // MDT index starts from 1
+                res.mnt.put(macroName, macro);
+                res.pntab.put(macroName, params);
+
+                Map<String, Integer> paramIndex = new LinkedHashMap<>();
+                for (int j = 0; j < params.size(); j++) {
+                    paramIndex.put(params.get(j), j + 1);
+                }
+
+                while (i < input.size()) {
+                    String body = input.get(i).trim();
+                    if (body.equalsIgnoreCase("MEND")) {
+                        res.mdt.add("MEND");
+                        i++;
+                        break;
+                    }
+                    String processed = body;
+                    for (Map.Entry<String, Integer> e : paramIndex.entrySet()) {
+                        processed = processed.replaceAll("&" + e.getKey(), "(P," + e.getValue() + ")");
+                    }
+                    res.mdt.add(processed);
+                    i++;
+                }
+            } else {
+                res.intermediate.add(line);
+                i++;
+            }
+        }
+        return res;
+    }
+
+    // ======= PASS 2 =======
+    public static List<String> pass2(Pass1Result p1) {
+        List<String> output = new ArrayList<>();
+
+        for (String line : p1.intermediate) {
+            String[] parts = line.split("\\s+", 2);
+            String name = parts[0];
+            String rest = (parts.length > 1) ? parts[1] : "";
+
+            if (p1.mnt.containsKey(name)) {
+                Macro m = p1.mnt.get(name);
+                String[] actuals = rest.split(",");
+                Map<Integer, String> actualMap = new HashMap<>();
+                for (int j = 0; j < actuals.length; j++) {
+                    actualMap.put(j + 1, actuals[j].trim());
+                }
+
+                int index = m.mdtStart - 1;
+                while (index < p1.mdt.size()) {
+                    String mline = p1.mdt.get(index);
+                    if (mline.equalsIgnoreCase("MEND")) break;
+
+                    String expanded = mline;
+                    for (int k = 1; k <= m.params.size(); k++) {
+                        expanded = expanded.replace("(P," + k + ")", actualMap.getOrDefault(k, ""));
+                    }
+                    output.add("+" + expanded);
+                    index++;
+                }
+            } else {
+                output.add(line);
+            }
+        }
+
+        return output;
+    }
+
+    // ======= MAIN =======
+    public static void main(String[] args) {
+
+        List<String> input = Arrays.asList(
+            "MACRO",
+            "M1 &X, &Y, &A=AREG, &B=MOVER",
+            "&B &A, &X",
+            "ADD &A, ='1'",
+            "MOVER &B, &Y",
+            "ADD &Y, ='5'",
+            "MEND",
+            "MACRO",
+            "M2 &P, &Q, &U=CREG, &V=DREG",
+            "MOVER &U, &P",
+            "MOVER &V, &Q",
+            "ADD &V, ='15'",
+            "ADD &V, ='10'",
+            "MEND",
+            "START 100",
+            "M1 10, 20, &B=CREG",
+            "M2 100, 200, &V=AREG, &U=BREG",
+            "END"
+        );
+
+        // ===== PASS 1 OUTPUT =====
+        System.out.println("\nOutput:");
+        System.out.println("Macro Pass1 Processing done ................)\n");
+        System.out.println("Macro Pass1 file");
+        System.out.println("-----------------------\n");
+        System.out.println("     Macro Input");
+        System.out.println("-----------------------");
+        for (String s : input) System.out.println(s);
+
+        // ---- Run Pass 1 ----
+        Pass1Result res = pass1(input);
+
+        System.out.println("\n     Intermediate");
+        System.out.println("-----------------------");
+        for (String s : res.intermediate) System.out.println(s);
+
+        System.out.println("\n     MDT");
+        System.out.println("-----------------------");
+        for (String s : res.mdt) System.out.println(s);
+
+        System.out.println("\n     MNT");
+        System.out.println("-----------------------");
+        int i = 1;
+        for (Map.Entry<String, Macro> e : res.mnt.entrySet()) {
+            Macro m = e.getValue();
+            System.out.printf("%s\t2\t2\t%d\t%d\n", m.name, m.mdtStart, i);
+            i++;
+        }
+
+        System.out.println("\n     PNTAB");
+        System.out.println("-----------------------");
+        for (Map.Entry<String, List<String>> e : res.pntab.entrySet()) {
+            System.out.print(e.getKey() + ": ");
+            for (String p : e.getValue()) System.out.print(p + " ");
+            System.out.println();
+        }
+
+        // ===== PASS 2 OUTPUT =====
+        System.out.println("\nOutput:");
+        System.out.println("Macro Pass2 Processing done ................)\n");
+        System.out.println("Macro Pass2 file");
+        System.out.println("-----------------------\n");
+        System.out.println("     Macro Input");
+        System.out.println("-----------------------");
+        for (String s : input) System.out.println(s);
+
+        System.out.println("\n     Intermediate");
+        System.out.println("-----------------------");
+        for (String s : res.intermediate) System.out.println(s);
+
+        List<String> finalOutput = pass2(res);
+        System.out.println("\n     Pass2");
+        System.out.println("-----------------------");
+        for (String s : finalOutput) System.out.println(s);
+    }
+}

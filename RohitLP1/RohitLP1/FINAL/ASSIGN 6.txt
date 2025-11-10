@@ -1,0 +1,177 @@
+ASSIGN 6
+
+import java.util.*;
+
+class MemoryAllocationMenu {
+    static Scanner sc = new Scanner(System.in);
+
+    public static void main(String[] args) {
+        while (true) {
+            System.out.println("\n---------------- MEMORY ALLOCATION ALGORITHMS ----------------");
+            System.out.println("1. First Fit");
+            System.out.println("2. Best Fit");
+            System.out.println("3. Worst Fit");
+            System.out.println("4. Next Fit");
+            System.out.println("5. Exit");
+            System.out.print("Enter your choice: ");
+            int ch = sc.nextInt();
+
+            switch (ch) {
+                case 1 -> firstFit();
+                case 2 -> bestFit();
+                case 3 -> worstFit();
+                case 4 -> nextFit();
+                case 5 -> {
+                    System.out.println("Exiting...");
+                    sc.close();
+                    return;
+                }
+                default -> System.out.println("Invalid choice! Try again.");
+            }
+        }
+    }
+
+    // ---------------- FIRST FIT ----------------
+    static void firstFit() {
+        System.out.print("Enter number of blocks: ");
+        int m = sc.nextInt();
+        int[] block = new int[m];
+        System.out.println("Enter block sizes:");
+        for (int i = 0; i < m; i++) block[i] = sc.nextInt();
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        int[] process = new int[n];
+        System.out.println("Enter process sizes:");
+        for (int i = 0; i < n; i++) process[i] = sc.nextInt();
+
+        int[] alloc = new int[n];
+        Arrays.fill(alloc, -1);
+
+        for (int i = 0; i < n; i++) {
+            for (int j = 0; j < m; j++) {
+                if (block[j] >= process[i]) {
+                    alloc[i] = j;
+                    block[j] -= process[i];
+                    break;
+                }
+            }
+        }
+
+        displayAllocation("First Fit", process, block, alloc);
+    }
+
+    // ---------------- BEST FIT ----------------
+    static void bestFit() {
+        System.out.print("Enter number of blocks: ");
+        int m = sc.nextInt();
+        int[] block = new int[m];
+        System.out.println("Enter block sizes:");
+        for (int i = 0; i < m; i++) block[i] = sc.nextInt();
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        int[] process = new int[n];
+        System.out.println("Enter process sizes:");
+        for (int i = 0; i < n; i++) process[i] = sc.nextInt();
+
+        int[] alloc = new int[n];
+        Arrays.fill(alloc, -1);
+
+        for (int i = 0; i < n; i++) {
+            int best = -1;
+            for (int j = 0; j < m; j++) {
+                if (block[j] >= process[i]) {
+                    if (best == -1 || block[j] < block[best])
+                        best = j;
+                }
+            }
+            if (best != -1) {
+                alloc[i] = best;
+                block[best] -= process[i];
+            }
+        }
+
+        displayAllocation("Best Fit", process, block, alloc);
+    }
+
+    // ---------------- WORST FIT ----------------
+    static void worstFit() {
+        System.out.print("Enter number of blocks: ");
+        int m = sc.nextInt();
+        int[] block = new int[m];
+        System.out.println("Enter block sizes:");
+        for (int i = 0; i < m; i++) block[i] = sc.nextInt();
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        int[] process = new int[n];
+        System.out.println("Enter process sizes:");
+        for (int i = 0; i < n; i++) process[i] = sc.nextInt();
+
+        int[] alloc = new int[n];
+        Arrays.fill(alloc, -1);
+
+        for (int i = 0; i < n; i++) {
+            int worst = -1;
+            for (int j = 0; j < m; j++) {
+                if (block[j] >= process[i]) {
+                    if (worst == -1 || block[j] > block[worst])
+                        worst = j;
+                }
+            }
+            if (worst != -1) {
+                alloc[i] = worst;
+                block[worst] -= process[i];
+            }
+        }
+
+        displayAllocation("Worst Fit", process, block, alloc);
+    }
+
+    // ---------------- NEXT FIT ----------------
+    static void nextFit() {
+        System.out.print("Enter number of blocks: ");
+        int m = sc.nextInt();
+        int[] block = new int[m];
+        System.out.println("Enter block sizes:");
+        for (int i = 0; i < m; i++) block[i] = sc.nextInt();
+
+        System.out.print("Enter number of processes: ");
+        int n = sc.nextInt();
+        int[] process = new int[n];
+        System.out.println("Enter process sizes:");
+        for (int i = 0; i < n; i++) process[i] = sc.nextInt();
+
+        int[] alloc = new int[n];
+        Arrays.fill(alloc, -1);
+
+        int j = 0;
+        for (int i = 0; i < n; i++) {
+            int count = 0;
+            while (count < m) {
+                if (block[j] >= process[i]) {
+                    alloc[i] = j;
+                    block[j] -= process[i];
+                    break;
+                }
+                j = (j + 1) % m;
+                count++;
+            }
+        }
+
+        displayAllocation("Next Fit", process, block, alloc);
+    }
+
+    // ---------------- DISPLAY FUNCTION ----------------
+    static void displayAllocation(String algo, int[] process, int[] block, int[] alloc) {
+        System.out.println("\n------ " + algo + " Result ------");
+        System.out.println("PNo\tPSize\tBlock\tRemaining");
+        for (int i = 0; i < process.length; i++) {
+            if (alloc[i] != -1)
+                System.out.println("P" + (i + 1) + "\t" + process[i] + "\t" + (alloc[i] + 1) + "\t" + block[alloc[i]]);
+            else
+                System.out.println("P" + (i + 1) + "\t" + process[i] + "\tNot Alloc\t-");
+        }
+    }
+}

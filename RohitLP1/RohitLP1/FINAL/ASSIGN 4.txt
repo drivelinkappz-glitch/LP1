@@ -1,0 +1,35 @@
+ASSIGN 4
+
+import java.util.*;
+
+class Threads {
+    public static void main(String[] a) {
+        PC pc = new PC();
+        new Thread(() -> { try { pc.produce(); } catch (Exception e) {} }).start();
+        new Thread(() -> { try { pc.consume(); } catch (Exception e) {} }).start();
+    }
+}
+
+class PC {
+    LinkedList<Integer> q = new LinkedList<>();
+    int cap = 2;
+
+    synchronized void produce() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            while (q.size() == cap) wait();
+            System.out.println("Produced " + i);
+            q.add(i);
+            notify();
+            Thread.sleep(500);
+        }
+    }
+
+    synchronized void consume() throws Exception {
+        for (int i = 0; i < 10; i++) {
+            while (q.isEmpty()) wait();
+            System.out.println("Consumed " + q.removeFirst());
+            notify();
+            Thread.sleep(500);
+        }
+    }
+}

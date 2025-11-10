@@ -1,0 +1,251 @@
+ASSIGN 1
+
+import java.util.*;
+
+class twoPassAssember {
+
+    // ===== Tables =====
+    static Map<String, String> mnemonicTable = new LinkedHashMap<>();
+    static Map<String, String> directiveTable = new LinkedHashMap<>();
+    static Map<String, String> registerTable = new LinkedHashMap<>();
+    static Map<String, String> conditionTable = new LinkedHashMap<>();
+    static Map<String, String> dataTable = new LinkedHashMap<>();
+
+    static Map<String, Integer> symbolTable = new LinkedHashMap<>();
+    static Map<String, Integer> literalTable = new LinkedHashMap<>();
+
+    static List<String> program = new ArrayList<>();
+    static List<String> intermediateCode = new ArrayList<>();
+
+    public static void main(String[] args) {
+
+        // ===== Initialize Tables =====
+        dataTable.put("DS", "001");
+        dataTable.put("DC", "002");
+
+        mnemonicTable.put("ADD", "01");
+        mnemonicTable.put("SUB", "02");
+        mnemonicTable.put("MULT", "03");
+        mnemonicTable.put("DIV", "04");
+        mnemonicTable.put("MOVER", "05");
+        mnemonicTable.put("MOVEM", "06");
+        mnemonicTable.put("BC", "07");
+
+        directiveTable.put("START", "11");
+        directiveTable.put("END", "12");
+        directiveTable.put("LTORG", "13");
+
+        conditionTable.put("LT", "21");
+        conditionTable.put("GT", "22");
+        conditionTable.put("LTE", "23");
+        conditionTable.put("GTE", "24");
+        conditionTable.put("EQU", "25");
+
+        registerTable.put("AREG", "31");
+        registerTable.put("BREG", "32");
+        registerTable.put("CREG", "33");
+        registerTable.put("DREG", "34");
+
+        // ===== Input Assembly Program =====
+        String[] input = {
+                "START 100",
+                "L1 MOVER AREG, =3",
+                "MOVEM BREG, X",
+                "SUB AREG, =1",
+                "LTORG",
+                "MOVEM AREG, Y",
+                "BC ANY, L1",
+                "ADD CREG, 4",
+                "X DC 6",
+                "Y DS 2",
+                "END"
+        };
+
+        Collections.addAll(program, input);
+
+        // ====== PASS 1 ======
+        System.out.println("=========== PASS 1 OUTPUT ===========\n");
+        pass1(input);
+
+        // ====== Print Pass-1 Tables ======
+        printTables();
+
+        // ====== PASS 2 ======
+        System.out.println("\n=========== PASS 2 OUTPUT ===========\n");
+        pass2();
+    }
+
+    // ================= PASS 1 ==================
+    static void pass1(String[] input) {
+        int loc = 0;
+
+        for (String line : input) {
+            String[] parts = line.split("[ ,]+");
+
+            if (parts[0].equals("START")) {
+                loc = Integer.parseInt(parts[1]);
+                intermediateCode.add("(AD,11) (C," + loc + ")");
+            } 
+            else if (parts[0].equals("END")) {
+                intermediateCode.add("(AD,12)");
+            } 
+            else if (parts[0].equals("LTORG")) {
+                handleLTORG(loc);
+                intermediateCode.add("(AD,13)");
+            } 
+            else {
+                // Label
+                if (parts[0].matches("[A-Za-z][A-Za-z0-9]*") && !mnemonicTable.containsKey(parts[0])) {
+                    symbolTable.put(parts[0], loc);
+                    parts = Arrays.copyOfRange(parts, 1, parts.length);
+                }
+
+                // DC / DS
+                if (parts.length >= 2 && (parts[1].equals("DC") || parts[1].equals("DS"))) {
+                    symbolTable.put(parts[0], loc);
+                    intermediateCode.add("(DL," + dataTable.get(parts[1]) + ") (C," + parts[2] + ")");
+                    loc += Integer.parseInt(parts[2]);
+                } 
+                else {
+                    String opcode = mnemonicTable.get(parts[0]);
+                    if (opcode != null) {
+                        String reg = "0", mem = "";
+                        if (parts.length > 1 && registerTable.containsKey(parts[1])) {
+                            reg = registerTable.get(parts[1]);
+                        }
+
+                        // Operand
+                        if (parts.length > 2) {
+                            String operand = parts[2];
+                            if (operand.startsWith("=")) {
+                                literalTable.put(operand, 0);
+                                mem = "(L," + operand + ")";
+                            } else if (symbolTable.containsKey(operand)) {
+                                mem = "(S," + operand + ")";
+                            } else if (operand.matches("[0-9]+")) {
+                                mem = "(C," + operand + ")";
+                            } else {
+                                symbolTable.putIfAbsent(operand, 0);
+                                mem = "(S," + operand + ")";
+                            }
+                        }
+
+                        intermediateCode.add("(IS," + opcode + ") (" + reg + ") " + mem);
+                        loc++;
+                    }
+                }
+            }
+        }
+
+        // Assign literal addresses (after LTORG)
+        int litAddr = loc;
+        for (String lit : literalTable.keySet()) {
+            if (literalTable.get(lit) == 0)
+                literalTable.put(lit, litAddr++);
+        }
+    }
+
+    
+ // ================= PASS 2 ==================
+    static void pass2() {
+        try {
+            System.out.println();
+            System.out.println("DATA  TABLE:" + dataTable);
+            System.out.println("MNEMONIC  TABLE:" + mnemonicTable);
+            System.out.println("DIRECTIVE  TABLE:" + directiveTable);
+            System.out.println("CONDITION  TABLE:" + conditionTable);
+            System.out.println("REGISTER  TABLE:" + registerTable);
+            System.out.println();
+
+            int loc = 100; // Starting address (for display)
+            for (String line : intermediateCode) {
+
+                if (line.startsWith("(IS")) {
+                    String[] rawParts = line.split("[(), ]+");
+                    List<String> parts = new ArrayList<>();
+
+                    // remove blank tokens
+                    for (String p : rawParts) {
+                        if (p != null && !p.trim().isEmpty()) {
+                            parts.add(p.trim());
+                        }
+                    }
+
+                    String opcode = parts.size() > 1 ? parts.get(1) : "00";
+                    String reg = "0";
+                    int addr = 0;
+
+                    // find register
+                    for (String p : parts) {
+                        if (p.matches("3[1-4]")) reg = p;
+                    }
+
+                    // find operand
+                    for (String p : parts) {
+                        if (p.startsWith("S") && p.length() > 1) {
+                            String symbol = p.substring(1);
+                            if (symbolTable.containsKey(symbol)) {
+                                addr = symbolTable.get(symbol);
+                            }
+                        } else if (p.startsWith("L") && p.length() > 1) {
+                            String literal = "=" + p.substring(1);
+                            if (literalTable.containsKey(literal)) {
+                                addr = literalTable.get(literal);
+                            }
+                        } else if (p.startsWith("C") && p.length() > 1) {
+                            try {
+                                addr = Integer.parseInt(p.substring(1));
+                            } catch (NumberFormatException e) {
+                                System.out.println("Invalid integer format in line: " + line);
+                                addr = 0;
+                            }
+                        }
+                    }
+
+                    System.out.println(loc + "  " + opcode + "  " + reg + "  " + addr + "   INSTRUCTION");
+                    loc++;
+                } else if (line.startsWith("(DL")) {
+                    System.out.println(loc + "  " + line + "   DECLARATIVE");
+                    loc++;
+                } else if (line.startsWith("(AD")) {
+                    System.out.println(loc + "  " + line + "   DIRECTIVE");
+                    loc++;
+                } else {
+                    System.out.println(loc + "  " + line + "   (Ignored)");
+                    loc++;
+                }
+            }
+        } 
+        catch (ArrayIndexOutOfBoundsException e) {
+            System.out.println("Exception caught: Index " + e.getMessage() + " out of bounds while processing Pass 2");
+        } 
+        catch (Exception e) {
+            System.out.println("Unexpected error during Pass 2: " + e.getMessage());
+        }
+    }
+
+    // ================= HELPERS ==================
+    static void handleLTORG(int loc) {
+        int litAddr = loc;
+        for (String lit : literalTable.keySet()) {
+            if (literalTable.get(lit) == 0)
+                literalTable.put(lit, litAddr++);
+        }
+    }
+
+    static void printTables() {
+        System.out.println("SYMBOL TABLE: " + symbolTable);
+        System.out.println("LITERAL TABLE: " + literalTable);
+        System.out.println("\nDATA TABLE: " + dataTable);
+        System.out.println("MNEMONIC TABLE: " + mnemonicTable);
+        System.out.println("DIRECTIVE TABLE: " + directiveTable);
+        System.out.println("CONDITION TABLE: " + conditionTable);
+        System.out.println("REGISTER TABLE: " + registerTable);
+        System.out.println("\nASSEMBLY PROGRAM:");
+        for (String line : program)
+            System.out.println(line);
+        System.out.println("\nINTERMEDIATE CODE:");
+        for (String ic : intermediateCode)
+            System.out.println(ic);
+    }
+}
